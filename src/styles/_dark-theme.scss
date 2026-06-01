@@ -1,0 +1,309 @@
+// ============================================
+// FamyPay Dark Theme Overrides
+// ============================================
+@use 'variables' as *;
+
+[data-theme='dark'] {
+  // --- Core Colors ---
+  --bg-color: #{$dark-bg};
+  --surface-color: #{$dark-surface};
+  --surface-color-rgb: 30, 41, 59;
+  --surface-alt: #{$dark-surface-alt};
+  --text-primary: #{$dark-text-primary};
+  --text-secondary: #{$dark-text-secondary};
+  --text-muted: #{$dark-text-muted};
+  --border-color: #{$dark-border};
+  --border-color-rgb: 51, 65, 85;
+  --divider-color: #{$dark-divider};
+
+  // --- Brand Colors (lighter for dark mode) ---
+  --primary-color: #{$primary-400};
+  --primary-color-rgb: 45, 212, 191;
+  --primary-hover: #{$primary-300};
+  --primary-bg: rgba(#{45, 212, 191}, 0.12);
+
+  --secondary-color: #{$secondary-400};
+  --secondary-hover: #{$secondary-300};
+
+  --accent-color: #{$accent-400};
+  --accent-hover: #{$accent-300};
+
+  --success-color: #{$success-400};
+  --success-bg: rgba(#{74, 222, 128}, 0.12);
+
+  --danger-color: #{$danger-400};
+  --danger-bg: rgba(#{248, 113, 113}, 0.12);
+
+  --warning-color: #{$warning-400};
+  --warning-bg: rgba(#{251, 191, 36}, 0.12);
+
+  --info-color: #{$info-400};
+  --info-bg: rgba(#{96, 165, 250}, 0.12);
+
+  // --- Shadows ---
+  --shadow-xs: #{$shadow-dark-sm};
+  --shadow-sm: #{$shadow-dark-sm};
+  --shadow-md: #{$shadow-dark-md};
+  --shadow-lg: #{$shadow-dark-lg};
+
+  // --- Component Overrides ---
+  --input-bg: #{$slate-900};
+  --input-border: #{$slate-700};
+  --card-bg: #{$dark-surface};
+
+  // --- Gradient overlay ---
+  --gradient-overlay: linear-gradient(
+    135deg,
+    rgba(#{13, 148, 136}, 0.15) 0%,
+    rgba(#{99, 102, 241}, 0.1) 100%
+  );
+
+  // Scrollbar
+  --scrollbar-thumb: #{$slate-600};
+  --scrollbar-track: #{$slate-800};
+
+  // --- PrimeNG Dialog (Modal) Premium Dark Theme Overrides ---
+  .p-dialog {
+    background: var(--surface-color) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--shadow-lg) !important;
+
+    .p-dialog-header {
+      background: var(--surface-color) !important;
+      color: var(--text-primary) !important;
+      border-bottom: 1px solid var(--divider-color) !important;
+      padding: $spacing-5 $spacing-6 !important;
+      
+      .p-dialog-title {
+        color: var(--text-primary) !important;
+        font-size: $font-size-lg !important;
+        font-weight: $font-weight-bold !important;
+      }
+      
+      .p-dialog-close-button {
+        color: var(--text-secondary) !important;
+        background: transparent !important;
+        border-radius: $radius-full !important;
+        width: 32px;
+        height: 32px;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all $transition-fast;
+        
+        &:hover {
+          color: var(--text-primary) !important;
+          background: var(--surface-alt) !important;
+        }
+      }
+    }
+
+    .p-dialog-content {
+      background: var(--surface-color) !important;
+      color: var(--text-primary) !important;
+      padding: $spacing-6 !important;
+    }
+
+    .p-dialog-footer, .p-dialog-footer-content {
+      background: var(--surface-color) !important;
+      border-top: 1px solid var(--divider-color) !important;
+      padding: $spacing-4 $spacing-6 !important;
+      display: flex !important;
+      justify-content: flex-end !important;
+      gap: $spacing-3 !important;
+      
+      button {
+        margin: 0 !important;
+      }
+    }
+  }
+
+  // Backdrop del modal con efecto esmerilado blur premium
+  .p-dialog-mask {
+    background-color: rgba(2, 6, 23, 0.7) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+  }
+
+  // Estilos de formulario e inputs dentro del modal para contraste soberbio
+  .dialog-form {
+    .form-field {
+      label {
+        color: var(--text-secondary) !important;
+        font-weight: $font-weight-medium !important;
+      }
+      .text-muted {
+        color: var(--text-muted) !important;
+      }
+    }
+  }
+
+  // --- Form Controls Dark Theme Overrides (Garantizar contraste al escribir) ---
+  .p-inputtext {
+    color: var(--text-primary) !important;
+    background-color: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    
+    &::placeholder {
+      color: var(--text-muted) !important;
+      opacity: 1; // Asegurar opacidad en navegadores modernos
+    }
+    
+    &:focus {
+      border-color: var(--primary-color) !important;
+      box-shadow: 0 0 0 2px var(--primary-bg) !important;
+    }
+  }
+
+  // --- PrimeNG Dropdown (Select) Premium Dark Theme Overrides ---
+  .p-select, .p-dropdown {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+    
+    .p-select-label, .p-dropdown-label {
+      color: var(--text-primary) !important;
+    }
+    
+    .p-select-trigger, .p-dropdown-trigger {
+      color: var(--text-secondary) !important;
+    }
+    
+    &:focus, &.p-focus {
+      border-color: var(--primary-color) !important;
+      box-shadow: 0 0 0 2px var(--primary-bg) !important;
+    }
+  }
+
+  // Panel de opciones desplegable del Select / Dropdown
+  .p-select-overlay, .p-select-panel, .p-dropdown-panel {
+    background: var(--surface-color) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--shadow-lg) !important;
+    
+    .p-select-option, .p-dropdown-item {
+      color: var(--text-primary) !important;
+      background: transparent !important;
+      
+      &:hover, &.p-focus {
+        background: var(--surface-alt) !important;
+        color: var(--text-primary) !important;
+      }
+      
+      &.p-selected {
+        background: var(--primary-bg) !important;
+        color: var(--primary-color) !important;
+      }
+    }
+    
+    .p-select-filter-container, .p-dropdown-filter-container {
+      background: var(--surface-alt) !important;
+      border-bottom: 1px solid var(--divider-color) !important;
+      
+      .p-select-filter, .p-dropdown-filter {
+        background: var(--input-bg) !important;
+        color: var(--text-primary) !important;
+      }
+    }
+  }
+
+  // --- PrimeNG InputNumber Premium Dark Theme Overrides ---
+  .p-inputnumber {
+    input {
+      color: var(--text-primary) !important;
+      background-color: var(--input-bg) !important;
+      border-color: var(--input-border) !important;
+      
+      &:focus {
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 2px var(--primary-bg) !important;
+      }
+    }
+  }
+
+  // --- Sobrescritura directa de variables CSS de PrimeNG ---
+  // PrimeNG genera variables --p-* que necesitamos sobrescribir para el modo oscuro
+  --p-surface-0: #0F172A;
+  --p-surface-50: #0f172a;
+  --p-surface-100: #1e293b;
+  --p-surface-200: #334155;
+  --p-surface-300: #475569;
+  --p-surface-400: #64748b;
+  --p-surface-500: #94a3b8;
+  --p-surface-600: #cbd5e1;
+  --p-surface-700: #e2e8f0;
+  --p-surface-800: #f1f5f9;
+  --p-surface-900: #f8fafc;
+  --p-surface-950: #ffffff;
+
+  // Colores de texto PrimeNG
+  --p-text-color: #{$dark-text-primary};
+  --p-text-muted-color: #{$dark-text-muted};
+  --p-text-hover-color: #{$dark-text-primary};
+
+  // Content backgrounds
+  --p-content-background: #{$dark-surface};
+  --p-content-hover-background: #{$dark-surface-alt};
+  --p-content-border-color: #{$dark-border};
+  --p-content-color: #{$dark-text-primary};
+  --p-content-hover-color: #{$dark-text-primary};
+
+  // Card específico
+  .p-card {
+    background: var(--surface-color) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+
+    .p-card-body, .p-card-content {
+      background: transparent !important;
+      color: var(--text-primary) !important;
+    }
+  }
+
+  // Progress bar
+  .p-progressbar {
+    background: #{$slate-700} !important;
+    .p-progressbar-value {
+      background: var(--primary-color) !important;
+    }
+  }
+
+  // Tag
+  .p-tag {
+    &.p-tag-success { background: var(--success-bg) !important; color: var(--success-color) !important; }
+    &.p-tag-danger { background: var(--danger-bg) !important; color: var(--danger-color) !important; }
+    &.p-tag-warning { background: var(--warning-bg) !important; color: var(--warning-color) !important; }
+    &.p-tag-info { background: var(--info-bg) !important; color: var(--info-color) !important; }
+  }
+
+  // Avatar
+  .p-avatar {
+    background: #{$slate-700} !important;
+    color: var(--text-primary) !important;
+  }
+
+  // Divider
+  .p-divider {
+    &::before {
+      border-color: var(--divider-color) !important;
+    }
+  }
+
+  // Toast
+  .p-toast {
+    .p-toast-message {
+      background: var(--surface-color) !important;
+      border-color: var(--border-color) !important;
+      color: var(--text-primary) !important;
+
+      .p-toast-message-icon,
+      .p-toast-message-text,
+      .p-toast-summary,
+      .p-toast-detail {
+        color: var(--text-primary) !important;
+      }
+    }
+  }
+}
+

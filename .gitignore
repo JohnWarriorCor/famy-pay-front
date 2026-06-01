@@ -1,0 +1,175 @@
+# ============================================================
+# FamyPay — .gitignore
+# ============================================================
+
+# --- Compiled output ---
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# --- Node ---
+/node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# ============================================================
+# 🔐 CREDENCIALES Y API KEYS — NUNCA subir al repositorio
+# ============================================================
+
+# Archivos de entorno con credenciales de Firebase y otros servicios
+src/app/environments/environment.ts
+src/app/environments/environment.prod.ts
+src/app/environments/environment.staging.ts
+src/app/environments/environment.development.ts
+src/app/environments/environment.*.ts
+# Excepción: el archivo de ejemplo SÍ se sube (sin credenciales reales)
+!src/app/environments/environment.example.ts
+
+# Ruta alternativa (Angular CLI estándar)
+src/environments/environment.ts
+src/environments/environment.prod.ts
+src/environments/environment.*.ts
+!src/environments/environment.example.ts
+
+# Configuración local de Firebase CLI
+.firebaserc
+firebase.json
+# Nota: firestore.rules y firestore.indexes.json SÍ se suben (no contienen secretos)
+
+# Archivos de cuenta de servicio de Google / Firebase Admin SDK
+*-service-account.json
+*-firebase-adminsdk-*.json
+service-account*.json
+serviceAccountKey.json
+google-services.json
+GoogleService-Info.plist
+
+# Claves privadas y certificados
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# Archivos .env (variables de entorno genéricas)
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.staging
+.env.*
+!.env.example
+!.env.template
+
+# Secretos de CI/CD (GitHub Actions, GitLab CI, etc.)
+.secrets
+secrets.json
+secrets.yaml
+secrets.yml
+
+# Tokens de acceso y configuraciones sensibles
+.npmrc-auth
+.yarnrc-auth
+auth-token.json
+api-keys.json
+api-keys.ts
+credentials.json
+credentials.ts
+
+# ============================================================
+# IDEs y editores
+# ============================================================
+
+# JetBrains (IntelliJ, WebStorm, etc.)
+.idea/
+
+# Eclipse
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+
+# Sublime Text
+*.sublime-workspace
+
+# Visual Studio Code (mantener solo archivos de configuración compartidos)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+.history/*
+
+# ============================================================
+# Angular / Build tools
+# ============================================================
+
+/.angular/cache
+.sass-cache/
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+
+# ============================================================
+# Sistema operativo
+# ============================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptionkey
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ============================================================
+# Logs y archivos temporales
+# ============================================================
+
+*.log
+logs/
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# ============================================================
+# Testing
+# ============================================================
+
+__screenshots__/
+/test-results/
+/playwright-report/
+/e2e/screenshots/
+
+# ============================================================
+# Archivos de análisis y profiling
+# ============================================================
+
+*.cpuprofile
+*.heapprofile
+stats.json
+bundle-stats.json

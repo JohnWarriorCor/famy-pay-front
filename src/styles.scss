@@ -1,0 +1,339 @@
+// ============================================
+// FamyPay Global Styles
+// ============================================
+@use 'styles/variables' as *;
+@use 'styles/mixins' as *;
+@use 'styles/typography';
+@use 'styles/animations';
+@use 'styles/light-theme';
+@use 'styles/dark-theme';
+
+// --- PrimeIcons ---
+@import 'primeicons/primeicons.css';
+
+// --- PrimeFlex ---
+@import 'primeflex/primeflex.css';
+
+// --- Global Reset & Base ---
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  transition: background-color $transition-base, color $transition-base;
+  overflow-x: hidden;
+  @include scrollbar-thin;
+}
+
+// --- Selection ---
+::selection {
+  background-color: rgba($primary-500, 0.2);
+  color: var(--text-primary);
+}
+
+// --- Focus ---
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+// --- Images ---
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+// --- Lists ---
+ul, ol {
+  list-style: none;
+}
+
+// --- Buttons ---
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+}
+
+// --- Inputs ---
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+// ============================================
+// PrimeNG Global Overrides
+// ============================================
+
+// Cards
+.p-card {
+  @include card;
+  overflow: hidden;
+
+  .p-card-body {
+    padding: $spacing-6;
+  }
+
+  .p-card-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-2;
+  }
+}
+
+// Buttons
+.p-button {
+  border-radius: $radius-md !important;
+  font-weight: $font-weight-medium !important;
+  transition: all $transition-fast !important;
+  letter-spacing: 0.01em;
+
+  &.p-button-rounded {
+    border-radius: $radius-full !important;
+  }
+}
+
+// Inputs
+.p-inputtext {
+  border-radius: $radius-md !important;
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  transition: border-color $transition-fast, box-shadow $transition-fast !important;
+
+  &:focus {
+    box-shadow: 0 0 0 3px rgba($primary-500, 0.15) !important;
+    border-color: var(--primary-color) !important;
+  }
+}
+
+// Dialogs
+.p-dialog {
+  border-radius: $radius-xl !important;
+  overflow: hidden;
+
+  .p-dialog-header {
+    padding: $spacing-6 !important;
+  }
+
+  .p-dialog-content {
+    padding: 0 $spacing-6 $spacing-6 !important;
+  }
+}
+
+// Toast
+.p-toast {
+  .p-toast-message {
+    border-radius: $radius-lg !important;
+    box-shadow: var(--shadow-lg) !important;
+  }
+}
+
+// DataTable
+.p-datatable {
+  .p-datatable-thead > tr > th {
+    background: var(--surface-alt) !important;
+    font-weight: $font-weight-semibold !important;
+    font-size: $font-size-sm !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary) !important;
+  }
+}
+
+// Tag
+.p-tag {
+  border-radius: $radius-full !important;
+  font-weight: $font-weight-medium !important;
+  font-size: $font-size-xs !important;
+}
+
+// ============================================
+// Utility Classes
+// ============================================
+
+// Gap
+.gap-1 { gap: $spacing-1; }
+.gap-2 { gap: $spacing-2; }
+.gap-3 { gap: $spacing-3; }
+.gap-4 { gap: $spacing-4; }
+.gap-6 { gap: $spacing-6; }
+.gap-8 { gap: $spacing-8; }
+
+// Padding
+.p-section {
+  padding: $spacing-6;
+  @include md { padding: $spacing-8; }
+}
+
+// Max width container
+.container {
+  max-width: $content-max-width;
+  margin: 0 auto;
+  padding: 0 $spacing-4;
+  @include md { padding: 0 $spacing-6; }
+}
+
+// --- Financial Colors ---
+.income-color { color: var(--success-color); }
+.expense-color { color: var(--danger-color); }
+.transfer-color { color: var(--info-color); }
+.budget-warning { color: var(--warning-color); }
+.budget-danger { color: var(--danger-color); }
+
+.income-bg { background-color: var(--success-bg); }
+.expense-bg { background-color: var(--danger-bg); }
+
+// --- Grid System ---
+.dashboard-grid {
+  display: grid;
+  gap: $spacing-6;
+  grid-template-columns: 1fr;
+
+  @include md {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include lg {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .span-2 {
+    @include md {
+      grid-column: span 2;
+    }
+  }
+
+  .span-3 {
+    @include lg {
+      grid-column: span 3;
+    }
+  }
+}
+
+// --- Page Header ---
+.page-header {
+  margin-bottom: $spacing-6;
+
+  .page-title {
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    color: var(--text-primary);
+    margin-bottom: $spacing-1;
+  }
+
+  .page-subtitle {
+    font-size: $font-size-sm;
+    color: var(--text-secondary);
+  }
+}
+
+// --- Empty State ---
+.empty-state {
+  @include flex-center;
+  @include flex-column;
+  padding: $spacing-16 $spacing-6;
+  text-align: center;
+
+  .empty-state-icon {
+    font-size: 3rem;
+    color: var(--text-muted);
+    margin-bottom: $spacing-4;
+  }
+
+  .empty-state-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-2;
+  }
+
+  .empty-state-text {
+    font-size: $font-size-sm;
+    color: var(--text-secondary);
+    max-width: 360px;
+  }
+}
+
+// --- Scrollable Area ---
+.scrollable {
+  overflow-y: auto;
+  @include scrollbar-thin;
+}
+
+// --- Divider ---
+.divider {
+  height: 1px;
+  background: var(--divider-color);
+  margin: $spacing-4 0;
+  border: none;
+}
+
+// --- Text Utilities ---
+.text-sm { font-size: $font-size-sm; }
+.text-xs { font-size: $font-size-xs; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-primary-color { color: var(--primary-color); }
+
+// --- Margin Utilities ---
+.mt-2 { margin-top: $spacing-2; }
+.mt-3 { margin-top: $spacing-3; }
+.mt-4 { margin-top: $spacing-4; }
+.mb-2 { margin-bottom: $spacing-2; }
+.mb-4 { margin-bottom: $spacing-4; }
+
+// --- Currency Display ---
+.currency {
+  font-variant-numeric: tabular-nums;
+  font-weight: $font-weight-semibold;
+}
+
+.currency-lg {
+  font-variant-numeric: tabular-nums;
+  font-weight: $font-weight-bold;
+}
+
+.currency-sm {
+  font-variant-numeric: tabular-nums;
+  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+}
+
+// --- Number Display ---
+.number-display {
+  font-variant-numeric: tabular-nums;
+}
+
+// --- Width ---
+.w-full { width: 100%; }
+
+// --- Stagger children animation ---
+.stagger-children {
+  > * {
+    @for $i from 1 through 12 {
+      &:nth-child(#{$i}) {
+        animation-delay: #{$i * 50}ms;
+      }
+    }
+  }
+}
+

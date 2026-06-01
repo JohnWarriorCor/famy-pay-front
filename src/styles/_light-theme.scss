@@ -1,0 +1,63 @@
+// ============================================
+// FamyPay Light Theme (Default)
+// ============================================
+@use 'variables' as *;
+
+:root {
+  --bg-color: #{$light-bg};
+  --surface-color: #{$light-surface};
+  --surface-color-rgb: 255, 255, 255;
+  --surface-alt: #{$light-surface-alt};
+  --text-primary: #{$light-text-primary};
+  --text-secondary: #{$light-text-secondary};
+  --text-muted: #{$light-text-muted};
+  --border-color: #{$light-border};
+  --border-color-rgb: 226, 232, 240;
+  --divider-color: #{$light-divider};
+
+  --primary-color: #{$primary-600};
+  --primary-color-rgb: 13, 148, 136;
+  --primary-hover: #{$primary-700};
+  --primary-bg: #{$primary-50};
+
+  --secondary-color: #{$secondary-500};
+  --secondary-hover: #{$secondary-600};
+
+  --accent-color: #{$accent-500};
+  --accent-hover: #{$accent-600};
+
+  --success-color: #{$success-500};
+  --success-bg: #{$success-50};
+
+  --danger-color: #{$danger-500};
+  --danger-bg: #{$danger-50};
+
+  --warning-color: #{$warning-500};
+  --warning-bg: #{$warning-50};
+
+  --info-color: #{$info-500};
+  --info-bg: #{$info-50};
+
+  --shadow-xs: #{$shadow-xs};
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+  --shadow-xl: #{$shadow-xl};
+
+  --input-bg: #{$light-surface};
+  --input-border: #{$slate-300};
+  --card-bg: #{$light-surface};
+
+  --gradient-overlay: linear-gradient(
+    135deg,
+    rgba(#{13, 148, 136}, 0.05) 0%,
+    rgba(#{99, 102, 241}, 0.03) 100%
+  );
+
+  --scrollbar-thumb: #{$slate-300};
+  --scrollbar-track: #{$slate-100};
+
+  --sidebar-width: #{$sidebar-width};
+  --topbar-height: #{$topbar-height};
+  --bottom-nav-height: #{$bottom-nav-height};
+}

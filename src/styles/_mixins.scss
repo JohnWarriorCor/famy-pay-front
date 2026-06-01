@@ -1,0 +1,220 @@
+// ============================================
+// FamyPay SCSS Mixins
+// ============================================
+@use 'variables' as *;
+
+// --- Responsive Breakpoints ---
+@mixin xs {
+  @media (min-width: $breakpoint-xs) { @content; }
+}
+
+@mixin sm {
+  @media (min-width: $breakpoint-sm) { @content; }
+}
+
+@mixin md {
+  @media (min-width: $breakpoint-md) { @content; }
+}
+
+@mixin lg {
+  @media (min-width: $breakpoint-lg) { @content; }
+}
+
+@mixin xl {
+  @media (min-width: $breakpoint-xl) { @content; }
+}
+
+@mixin xxl {
+  @media (min-width: $breakpoint-2xl) { @content; }
+}
+
+@mixin mobile-only {
+  @media (max-width: #{$breakpoint-md - 1px}) { @content; }
+}
+
+@mixin tablet-only {
+  @media (min-width: $breakpoint-md) and (max-width: #{$breakpoint-lg - 1px}) { @content; }
+}
+
+@mixin desktop-only {
+  @media (min-width: $breakpoint-lg) { @content; }
+}
+
+// --- Flexbox ---
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+// --- Card Styles ---
+@mixin card($padding: $spacing-6) {
+  background: var(--surface-color);
+  border-radius: $radius-lg;
+  padding: $padding;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  transition: box-shadow $transition-base, transform $transition-base;
+}
+
+@mixin card-hover {
+  &:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+}
+
+@mixin card-interactive {
+  @include card;
+  @include card-hover;
+  cursor: pointer;
+}
+
+// --- Glass Effect ---
+@mixin glass($opacity: 0.6) {
+  background: rgba(var(--surface-color-rgb), $opacity);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(var(--border-color-rgb), 0.3);
+}
+
+// --- Gradient ---
+@mixin gradient-primary {
+  background: linear-gradient(135deg, $primary-500 0%, $primary-700 100%);
+}
+
+@mixin gradient-secondary {
+  background: linear-gradient(135deg, $secondary-500 0%, $secondary-700 100%);
+}
+
+@mixin gradient-accent {
+  background: linear-gradient(135deg, $accent-400 0%, $accent-600 100%);
+}
+
+@mixin gradient-hero {
+  background: linear-gradient(135deg, $primary-600 0%, $secondary-600 50%, $primary-800 100%);
+}
+
+// --- Text Styles ---
+@mixin heading-xl {
+  font-size: $font-size-4xl;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  letter-spacing: -0.02em;
+}
+
+@mixin heading-lg {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  letter-spacing: -0.01em;
+}
+
+@mixin heading-md {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+}
+
+@mixin heading-sm {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+}
+
+@mixin text-body {
+  font-size: $font-size-base;
+  font-weight: $font-weight-normal;
+  line-height: $line-height-normal;
+}
+
+@mixin text-small {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-normal;
+  line-height: $line-height-normal;
+}
+
+@mixin text-caption {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  line-height: $line-height-normal;
+  color: var(--text-secondary);
+}
+
+// --- Truncate ---
+@mixin truncate($lines: 1) {
+  @if $lines == 1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+// --- Scrollbar ---
+@mixin scrollbar-thin {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: $radius-full;
+    &:hover {
+      background: var(--text-secondary);
+    }
+  }
+}
+
+// --- Focus Ring ---
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: $radius-sm;
+  }
+}
+
+// --- Skeleton Loader ---
+@mixin skeleton {
+  background: linear-gradient(90deg,
+    var(--surface-alt) 25%,
+    var(--border-color) 50%,
+    var(--surface-alt) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: $radius-md;
+}
+
+// --- Badge ---
+@mixin badge($bg: $primary-500, $color: #fff) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-1 $spacing-2;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-full;
+  background: $bg;
+  color: $color;
+  line-height: 1;
+}

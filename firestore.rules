@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // === FUNCIONES HELPER ===
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isMemberOfSpace(spaceId) {
+      return exists(/databases/$(database)/documents/familySpaces/$(spaceId)/members/$(request.auth.uid));
+    }
+
+    function getRoleInSpace(spaceId) {
+      return get(/databases/$(database)/documents/familySpaces/$(spaceId)/members/$(request.auth.uid)).data.role;
+    }
+
+    function isAdminOfSpace(spaceId) {
+      let role = getRoleInSpace(spaceId);
+      return role == 'superAdmin' || role == 'admin';
+    }
+
+    function isSuperAdminOfSpace(spaceId) {
+      return getRoleInSpace(spaceId) == 'superAdmin';
+    }
+
+    // === USERS ===
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // === FAMILY SPACES ===
+    match /familySpaces/{spaceId} {
+      allow read: if isAuthenticated() && isMemberOfSpace(spaceId);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && isAdminOfSpace(spaceId);
+      allow delete: if isAuthenticated() && isSuperAdminOfSpace(spaceId);
+
+      // Miembros
+      match /members/{memberId} {
+        allow read: if isAuthenticated() && isMemberOfSpace(spaceId);
+        allow create: if isAuthenticated()
+          && (isAdminOfSpace(spaceId) || memberId == request.auth.uid);
+        allow update: if isAuthenticated() && isAdminOfSpace(spaceId);
+        allow delete: if isAuthenticated()
+          && (isAdminOfSpace(spaceId) || memberId == request.auth.uid);
+      }
+
+      // Categorías
+      match /categories/{categoryId} {
+        allow read: if isAuthenticated() && isMemberOfSpace(spaceId);
+        allow write: if isAuthenticated() && isAdminOfSpace(spaceId);
+      }
+
+      // Transacciones
+      match /transactions/{transactionId} {
+        allow read: if isAuthenticated() && isMemberOfSpace(spaceId);
+        allow create: if isAuthenticated() && isMemberOfSpace(spaceId)
+          && request.resource.data.userId == request.auth.uid;
+        allow update: if isAuthenticated()
+          && (resource.data.userId == request.auth.uid || isAdminOfSpace(spaceId));
+        allow delete: if isAuthenticated()
+          && (resource.data.userId == request.auth.uid || isAdminOfSpace(spaceId));
+      }
+
+      // Presupuestos
+      match /budgets/{budgetId} {
+        allow read: if isAuthenticated() && isMemberOfSpace(spaceId);
+        allow write: if isAuthenticated() && isAdminOfSpace(spaceId);
+      }
+
+      // Metas de ahorro
+      match /savingsGoals/{goalId} {
+        allow read: if isAuthenticated() && isMemberOfSpace(spaceId);
+        allow create: if isAuthenticated() && isMemberOfSpace(spaceId);
+        allow update: if isAuthenticated() && isMemberOfSpace(spaceId);
+        allow delete: if isAuthenticated() && isAdminOfSpace(spaceId);
+      }
+
+      // Logros
+      match /achievements/{achievementId} {
+        allow read: if isAuthenticated() && isMemberOfSpace(spaceId);
+        allow create: if isAuthenticated() && isMemberOfSpace(spaceId);
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    // === INVITES ===
+    match /invites/{inviteCode} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if isAuthenticated();
+    }
+
+    // Denegar todo lo demás
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
