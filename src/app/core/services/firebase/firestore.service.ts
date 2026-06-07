@@ -94,6 +94,12 @@ export class FirestoreService {
     await setDoc(ref, data);
   }
 
+  /** Crear o actualizar parcialmente un documento (merge) */
+  async mergeDocument(documentPath: string, data: Record<string, any>): Promise<void> {
+    const ref = doc(this.db, documentPath);
+    await setDoc(ref, data, { merge: true });
+  }
+
   /** Actualizar campos de un documento */
   async updateDocument(documentPath: string, data: Record<string, any>): Promise<void> {
     const ref = doc(this.db, documentPath);

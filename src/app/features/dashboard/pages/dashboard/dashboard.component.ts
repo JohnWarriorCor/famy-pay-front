@@ -163,6 +163,10 @@ import { orderBy, limit, Unsubscribe } from 'firebase/firestore';
     .dashboard {
       @include flex-column;
       gap: $spacing-6;
+
+      @include mobile-only {
+        gap: $spacing-4;
+      }
     }
 
     // --- Balance Card ---
@@ -263,6 +267,11 @@ import { orderBy, limit, Unsubscribe } from 'firebase/firestore';
       align-items: center;
       gap: $spacing-4;
       padding: $spacing-5;
+
+      @include mobile-only {
+        padding: $spacing-4;
+        gap: $spacing-3;
+      }
     }
 
     .metric-icon {
@@ -319,6 +328,11 @@ import { orderBy, limit, Unsubscribe } from 'firebase/firestore';
       cursor: pointer;
       transition: all $transition-fast;
       font-family: inherit;
+
+      @include mobile-only {
+        padding: $spacing-3 $spacing-2;
+        gap: 6px;
+      }
 
       &:hover {
         transform: translateY(-2px);

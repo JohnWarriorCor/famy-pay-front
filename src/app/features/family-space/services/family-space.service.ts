@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, effect } from '@angular/core';
 import { FirestoreService } from '../../../core/services/firebase/firestore.service';
 import { AuthService } from '../../../core/services/firebase/auth.service';
 import { CategoryService } from '../../transactions/services/category.service';
@@ -15,6 +15,7 @@ export class FamilySpaceService {
   private readonly _activeSpace = signal<FamilySpace | null>(null);
   private readonly _members = signal<FamilyMember[]>([]);
   private readonly _loading = signal(false);
+  private _initialized = false;
 
   /** Espacios familiares del usuario */
   readonly spaces = this._spaces.asReadonly();
@@ -23,6 +24,29 @@ export class FamilySpaceService {
   /** Miembros del espacio activo */
   readonly members = this._members.asReadonly();
   readonly loading = this._loading.asReadonly();
+
+  constructor() {
+    // Efecto reactivo: cuando el usuario cambie (login, refresh, logout),
+    // recargar automáticamente los espacios familiares
+    effect(() => {
+      const user = this.auth.currentUser();
+      const isLoading = this.auth.loading();
+
+      // Solo actuar cuando auth ha terminado de inicializar
+      if (!isLoading) {
+        if (user) {
+          // Usuario autenticado → cargar sus espacios
+          this.loadUserSpaces();
+        } else {
+          // Usuario cerró sesión → limpiar estado
+          this._spaces.set([]);
+          this._activeSpace.set(null);
+          this._members.set([]);
+          this._initialized = false;
+        }
+      }
+    });
+  }
 
   /** Generar código de invitación único (8 chars) */
   private generateInviteCode(): string {
@@ -68,8 +92,8 @@ export class FamilySpaceService {
         createdAt: Timestamp.now(),
       });
 
-      // 4. Actualizar usuario con el nuevo espacio
-      await this.firestore.updateDocument(`users/${user.uid}`, {
+      // 4. Actualizar usuario con el nuevo espacio (merge para crear doc si no existe)
+      await this.firestore.mergeDocument(`users/${user.uid}`, {
         familySpaceIds: arrayUnion(spaceId),
       });
 
@@ -107,8 +131,8 @@ export class FamilySpaceService {
         photoURL: user.photoURL || null,
       });
 
-      // 4. Actualizar usuario
-      await this.firestore.updateDocument(`users/${user.uid}`, {
+      // 4. Actualizar usuario (merge para crear doc si no existe)
+      await this.firestore.mergeDocument(`users/${user.uid}`, {
         familySpaceIds: arrayUnion(spaceId),
       });
 
@@ -136,7 +160,7 @@ export class FamilySpaceService {
     }
     this._spaces.set(spaces);
 
-    // Auto-seleccionar el primer espacio
+    // Auto-seleccionar el primer espacio si no hay ninguno activo
     if (spaces.length > 0 && !this._activeSpace()) {
       this.setActiveSpace(spaces[0]);
     }

@@ -34,7 +34,8 @@ import { BottomNavComponent } from '../bottom-nav/bottom-nav.component';
 
       @include mobile-only {
         margin-left: 0;
-        margin-bottom: $bottom-nav-height;
+        margin-bottom: 0;
+        padding-bottom: calc(#{$bottom-nav-height} + env(safe-area-inset-bottom, 0px) + 24px);
       }
     }
 

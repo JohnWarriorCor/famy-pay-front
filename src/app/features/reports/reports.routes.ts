@@ -95,18 +95,31 @@ Chart.register(...registerables);
     @use '../../../styles/variables' as *;
     @use '../../../styles/mixins' as *;
 
-    .reports-page { @include flex-column; gap: $spacing-6; }
+    .reports-page { 
+      @include flex-column; 
+      gap: $spacing-6; 
+      max-width: 100%;
+      overflow-x: hidden;
+    }
 
     .export-actions {
       display: flex;
       gap: $spacing-3;
       flex-wrap: wrap;
+      
+      @include mobile-only {
+        button {
+          flex: 1;
+          min-width: 130px;
+        }
+      }
     }
 
     .charts-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: $spacing-4;
+      max-width: 100%;
       @include mobile-only { grid-template-columns: 1fr; }
     }
 
@@ -114,20 +127,37 @@ Chart.register(...registerables);
       @include card;
       @include flex-column;
       gap: $spacing-4;
+      min-width: 0; /* Permite que el grid item se encoja por debajo del ancho de la gráfica */
+      max-width: 100%;
 
       h3 { font-size: $font-size-base; font-weight: $font-weight-semibold; }
 
       &.span-full { grid-column: 1 / -1; }
     }
 
-    .chart-container { position: relative; height: 250px; }
-    .chart-container.wide { height: 300px; }
+    .chart-container { 
+      position: relative; 
+      height: 250px; 
+      width: 100%; 
+      max-width: 100%;
+    }
+    
+    .chart-container.wide { 
+      height: 300px; 
+      width: 100%; 
+      max-width: 100%;
+    }
+
+    canvas {
+      max-width: 100% !important;
+    }
 
     .summary-table-card {
       @include card;
       @include flex-column;
       gap: $spacing-4;
       overflow-x: auto;
+      max-width: 100%;
 
       h3 { font-size: $font-size-base; font-weight: $font-weight-semibold; }
     }
@@ -136,6 +166,7 @@ Chart.register(...registerables);
       width: 100%;
       border-collapse: collapse;
       font-size: $font-size-sm;
+      min-width: 450px; /* Garantiza legibilidad de la tabla con scroll interno */
 
       th {
         padding: $spacing-3;
@@ -172,7 +203,7 @@ export class ReportsPage implements AfterViewInit {
   ];
 
   ngAfterViewInit(): void {
-    setTimeout(() => this.initCharts(), 100);
+    setTimeout(() => this.initCharts(), 300);
   }
 
   private initCharts(): void {
