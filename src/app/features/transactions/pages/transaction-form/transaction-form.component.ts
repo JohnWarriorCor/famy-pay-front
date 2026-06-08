@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -12,16 +12,10 @@ import { ToggleButtonModule } from 'primeng/togglebutton';
 import { RippleModule } from 'primeng/ripple';
 import { TagModule } from 'primeng/tag';
 import { NotificationService } from '../../../../core/services/notification.service';
-import { Category, TransactionType } from '../../../../core/models';
-import { DEFAULT_CATEGORIES } from '../../../../core/constants/app.constants';
-
-interface QuickCategory {
-  name: string;
-  icon: string;
-  color: string;
-  id: string;
-  type: 'fixedExpense' | 'variableExpense' | 'income';
-}
+import { Category, TransactionType, Transaction } from '../../../../core/models';
+import { CategoryService } from '../../services/category.service';
+import { TransactionService } from '../../services/transaction.service';
+import { FamilySpaceService } from '../../../family-space/services/family-space.service';
 
 @Component({
   selector: 'app-transaction-form',
@@ -420,10 +414,13 @@ export class TransactionFormComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private notification = inject(NotificationService);
+  private transactionService = inject(TransactionService);
+  private familyService = inject(FamilySpaceService);
+  private categoryService = inject(CategoryService);
 
   readonly isIncome = signal(false);
   readonly amount = signal(0);
-  readonly selectedCategory = signal<QuickCategory | null>(null);
+  readonly selectedCategory = signal<Category | null>(null);
   readonly expenseType = signal<'variableExpense' | 'fixedExpense'>('variableExpense');
   readonly saving = signal(false);
 
@@ -433,21 +430,21 @@ export class TransactionFormComponent implements OnInit {
   today = new Date();
   isMobile = window.innerWidth < 768;
 
-  // Categorías agrupadas para display rápido
-  private readonly allCategories: QuickCategory[] = DEFAULT_CATEGORIES.map((c, i) => ({
-    ...c,
-    id: `default-${i}`,
-    type: c.type as 'fixedExpense' | 'variableExpense' | 'income',
-  }));
-
-  readonly displayCategories = () => {
+  readonly displayCategories = computed(() => {
+    const cats = this.categoryService.categories();
     if (this.isIncome()) {
-      return this.allCategories.filter(c => c.type === 'income');
+      return cats.filter(c => c.type === 'income');
     }
-    return this.allCategories.filter(c => c.type !== 'income');
-  };
+    return cats.filter(c => c.type !== 'income');
+  });
 
   ngOnInit(): void {
+    // Escuchar categorías del espacio activo
+    const space = this.familyService.activeSpace();
+    if (space) {
+      this.categoryService.listenToCategories(space.id);
+    }
+
     // Verificar si se pide tipo income desde query params
     const type = this.route.snapshot.queryParams['type'];
     if (type === 'income') {
@@ -475,7 +472,7 @@ export class TransactionFormComponent implements OnInit {
     }
   }
 
-  selectCategory(cat: QuickCategory): void {
+  selectCategory(cat: Category): void {
     this.selectedCategory.set(cat);
   }
 
@@ -486,22 +483,38 @@ export class TransactionFormComponent implements OnInit {
       return;
     }
 
+    const space = this.familyService.activeSpace();
+    if (!space) {
+      this.notification.error('Error', 'No hay un espacio familiar activo. Crea o únete a uno primero.');
+      return;
+    }
+
     try {
       this.saving.set(true);
 
-      // TODO: Guardar en Firestore cuando haya un espacio familiar activo
-      // Por ahora, simular guardado
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const txData = {
+        type: (this.isIncome() ? 'income' : this.expenseType()) as TransactionType,
+        amount: this.amount(),
+        categoryId: cat.id,
+        categoryName: cat.name,
+        description: this.description.trim() || cat.name,
+        date: this.selectedDate || new Date(),
+        receiptOcrText: null,
+        isRecurring: false,
+        status: 'confirmed' as const
+      };
 
-      const type = this.isIncome() ? 'ingreso' : 'gasto';
+      await this.transactionService.addTransaction(space.id, txData);
+
+      const typeLabel = this.isIncome() ? 'Ingreso' : 'Gasto';
       this.notification.success(
-        `${type.charAt(0).toUpperCase() + type.slice(1)} registrado`,
+        `${typeLabel} registrado`,
         `$${this.amount().toLocaleString('es-CO')} en ${cat.name}`
       );
 
       this.router.navigate(['/dashboard']);
-    } catch (error) {
-      this.notification.error('Error', 'No se pudo registrar la transacción');
+    } catch (error: any) {
+      this.notification.error('Error', error.message || 'No se pudo registrar la transacción');
     } finally {
       this.saving.set(false);
     }

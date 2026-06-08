@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -10,6 +10,8 @@ import { RippleModule } from 'primeng/ripple';
 import { CurrencyFormatPipe } from '../../../../shared/pipes/currency-format.pipe';
 import { RelativeDatePipe } from '../../../../shared/pipes/relative-date.pipe';
 import { Transaction, TransactionType } from '../../../../core/models';
+import { TransactionService } from '../../services/transaction.service';
+import { FamilySpaceService } from '../../../family-space/services/family-space.service';
 
 @Component({
   selector: 'app-transaction-list',
@@ -53,7 +55,12 @@ import { Transaction, TransactionType } from '../../../../core/models';
       </div>
 
       <!-- Transactions -->
-      @if (filteredTransactions().length > 0) {
+      @if (loading()) {
+        <div class="loading-state animate-fade-in">
+          <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: var(--primary-color);"></i>
+          <p class="mt-2">Cargando transacciones...</p>
+        </div>
+      } @else if (filteredTransactions().length > 0) {
         <!-- Group by date -->
         @for (group of groupedTransactions(); track group.label) {
           <div class="date-group">
@@ -203,9 +210,24 @@ import { Transaction, TransactionType } from '../../../../core/models';
       font-size: $font-size-xs;
       color: var(--text-muted);
     }
+
+    .loading-state {
+      @include flex-center;
+      @include flex-column;
+      gap: $spacing-3;
+      padding: $spacing-8 0;
+      color: var(--text-secondary);
+      font-size: $font-size-sm;
+    }
   `]
 })
-export class TransactionListComponent {
+export class TransactionListComponent implements OnInit, OnDestroy {
+  private transactionService = inject(TransactionService);
+  private familyService = inject(FamilySpaceService);
+
+  readonly activeSpace = this.familyService.activeSpace;
+  readonly loading = this.transactionService.loading;
+
   searchTerm = '';
   typeFilter: string | null = null;
 
@@ -215,20 +237,28 @@ export class TransactionListComponent {
     { label: 'Gastos Variables', value: 'variableExpense' },
   ];
 
-  // Demo transactions
-  private readonly allTransactions = signal<Transaction[]>([
-    { id: '1', type: 'variableExpense', amount: 85000, categoryId: '1', categoryName: 'Alimentación', description: 'Supermercado Éxito', userId: '1', userName: 'Juan', date: new Date(), createdAt: new Date(), receiptOcrText: null, isRecurring: false, status: 'confirmed' },
-    { id: '2', type: 'variableExpense', amount: 45000, categoryId: '2', categoryName: 'Transporte', description: 'Tanqueo gasolina', userId: '1', userName: 'Juan', date: new Date(), createdAt: new Date(), receiptOcrText: null, isRecurring: false, status: 'confirmed' },
-    { id: '3', type: 'variableExpense', amount: 32000, categoryId: '5', categoryName: 'Restaurantes', description: 'Almuerzo familiar', userId: '2', userName: 'María', date: new Date(Date.now() - 86400000), createdAt: new Date(), receiptOcrText: null, isRecurring: false, status: 'confirmed' },
-    { id: '4', type: 'income', amount: 3200000, categoryId: '3', categoryName: 'Salario', description: 'Salario Junio', userId: '1', userName: 'Juan', date: new Date(Date.now() - 86400000), createdAt: new Date(), receiptOcrText: null, isRecurring: true, status: 'confirmed' },
-    { id: '5', type: 'fixedExpense', amount: 150000, categoryId: '4', categoryName: 'Servicios', description: 'Electricidad', userId: '1', userName: 'Juan', date: new Date(Date.now() - 172800000), createdAt: new Date(), receiptOcrText: null, isRecurring: true, status: 'confirmed' },
-    { id: '6', type: 'fixedExpense', amount: 89000, categoryId: '4', categoryName: 'Servicios', description: 'Internet ETB', userId: '1', userName: 'Juan', date: new Date(Date.now() - 172800000), createdAt: new Date(), receiptOcrText: null, isRecurring: true, status: 'confirmed' },
-    { id: '7', type: 'variableExpense', amount: 120000, categoryId: '6', categoryName: 'Salud', description: 'Farmacia', userId: '2', userName: 'María', date: new Date(Date.now() - 345600000), createdAt: new Date(), receiptOcrText: null, isRecurring: false, status: 'confirmed' },
-    { id: '8', type: 'income', amount: 500000, categoryId: '3', categoryName: 'Freelance', description: 'Proyecto web', userId: '1', userName: 'Juan', date: new Date(Date.now() - 518400000), createdAt: new Date(), receiptOcrText: null, isRecurring: false, status: 'confirmed' },
-  ]);
+  constructor() {
+    effect(() => {
+      const space = this.activeSpace();
+      if (space) {
+        this.transactionService.listenToTransactions(space.id);
+      }
+    });
+  }
+
+  ngOnInit(): void {
+    const space = this.activeSpace();
+    if (space) {
+      this.transactionService.listenToTransactions(space.id);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.transactionService.destroy();
+  }
 
   readonly filteredTransactions = computed(() => {
-    let txs = this.allTransactions();
+    let txs = this.transactionService.transactions();
     if (this.typeFilter) {
       txs = txs.filter(t => t.type === this.typeFilter);
     }

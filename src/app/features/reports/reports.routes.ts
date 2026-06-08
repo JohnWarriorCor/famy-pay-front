@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { Component, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, signal, ViewChild, ElementRef, AfterViewInit, inject, computed, effect, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -9,6 +9,11 @@ import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
 import { Chart, registerables } from 'chart.js';
 import { CurrencyFormatPipe } from '../../shared/pipes/currency-format.pipe';
+import { FamilySpaceService } from '../family-space/services/family-space.service';
+import { TransactionService } from '../transactions/services/transaction.service';
+import { BudgetService } from '../budgets/services/budget.service';
+import { CategoryService } from '../transactions/services/category.service';
+import { Transaction, Budget } from '../../core/models';
 
 Chart.register(...registerables);
 
@@ -72,7 +77,7 @@ Chart.register(...registerables);
             </tr>
           </thead>
           <tbody>
-            @for (row of tableData; track row.category) {
+            @for (row of tableData(); track row.category) {
               <tr>
                 <td>{{ row.category }}</td>
                 <td class="text-right currency-sm">{{ row.budget | currencyFormat }}</td>
@@ -188,36 +193,134 @@ Chart.register(...registerables);
     }
   `]
 })
-export class ReportsPage implements AfterViewInit {
+export class ReportsPage implements AfterViewInit, OnInit, OnDestroy {
   @ViewChild('categoryChart') categoryChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('trendChart') trendChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('comparisonChart') comparisonChartRef!: ElementRef<HTMLCanvasElement>;
 
-  tableData = [
-    { category: 'Alimentación', budget: 500000, spent: 380000, percentage: 76 },
-    { category: 'Transporte', budget: 300000, spent: 210000, percentage: 70 },
-    { category: 'Servicios', budget: 400000, spent: 390000, percentage: 97 },
-    { category: 'Entretenimiento', budget: 200000, spent: 85000, percentage: 42 },
-    { category: 'Restaurantes', budget: 150000, spent: 165000, percentage: 110 },
-    { category: 'Salud', budget: 250000, spent: 120000, percentage: 48 },
+  private familyService = inject(FamilySpaceService);
+  private transactionService = inject(TransactionService);
+  private budgetService = inject(BudgetService);
+  private categoryService = inject(CategoryService);
+
+  private categoryChart?: Chart;
+  private trendChart?: Chart;
+  private comparisonChart?: Chart;
+  private chartsInitialized = false;
+
+  private readonly monthKey = (() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  })();
+
+  private readonly chartColors = [
+    '#F59E0B', '#6366F1', '#F97316', '#A855F7', '#F43F5E', '#EC4899',
+    '#14B8A6', '#3B82F6', '#8B5CF6', '#EF4444', '#22C55E', '#64748B'
   ];
 
+  /** Tabla de resumen calculada dinámicamente desde Firestore */
+  readonly tableData = computed(() => {
+    const transactions = this.transactionService.transactions();
+    const budgets = this.budgetService.budgets();
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // Filtrar gastos del mes actual
+    const monthExpenses = transactions.filter(tx => {
+      if (tx.type === 'income') return false;
+      const d = new Date(tx.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+
+    // Agrupar gastos por categoría
+    const spentByCategory = new Map<string, { name: string; spent: number }>();
+    monthExpenses.forEach(tx => {
+      const existing = spentByCategory.get(tx.categoryId) || { name: tx.categoryName, spent: 0 };
+      existing.spent += tx.amount;
+      spentByCategory.set(tx.categoryId, existing);
+    });
+
+    // Crear mapa de presupuestos por categoría
+    const budgetByCategory = new Map<string, number>();
+    budgets.forEach(b => budgetByCategory.set(b.categoryId, b.limit));
+
+    // Combinar categorías (de gastos + de presupuestos)
+    const allCategoryIds = new Set([...spentByCategory.keys(), ...budgetByCategory.keys()]);
+    const rows: { category: string; budget: number; spent: number; percentage: number }[] = [];
+
+    allCategoryIds.forEach(catId => {
+      const spentData = spentByCategory.get(catId);
+      const budgetData = budgets.find(b => b.categoryId === catId);
+      const categoryName = spentData?.name || budgetData?.categoryName || 'Sin categoría';
+      const spent = spentData?.spent || 0;
+      const budget = budgetByCategory.get(catId) || 0;
+      const percentage = budget > 0 ? Math.round((spent / budget) * 100) : (spent > 0 ? 100 : 0);
+
+      rows.push({ category: categoryName, budget, spent, percentage });
+    });
+
+    return rows.sort((a, b) => b.spent - a.spent);
+  });
+
+  constructor() {
+    // Redibujar gráficas cuando los datos cambien
+    effect(() => {
+      const table = this.tableData();
+      const txs = this.transactionService.transactions();
+      if (this.chartsInitialized) {
+        this.updateCharts();
+      }
+    });
+  }
+
+  ngOnInit(): void {
+    const space = this.familyService.activeSpace();
+    if (space) {
+      this.transactionService.listenToTransactions(space.id);
+      this.budgetService.listenToBudgets(space.id, this.monthKey);
+      this.categoryService.listenToCategories(space.id);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.categoryChart?.destroy();
+    this.trendChart?.destroy();
+    this.comparisonChart?.destroy();
+    this.transactionService.destroy();
+    this.budgetService.destroy();
+  }
+
   ngAfterViewInit(): void {
-    setTimeout(() => this.initCharts(), 300);
+    setTimeout(() => {
+      this.initCharts();
+      this.chartsInitialized = true;
+    }, 300);
+  }
+
+  private getTextColor(): string {
+    return getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#64748B';
+  }
+
+  private getGridColor(): string {
+    return getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() || '#E2E8F0';
   }
 
   private initCharts(): void {
-    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#64748B';
-    const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() || '#E2E8F0';
+    const textColor = this.getTextColor();
+    const gridColor = this.getGridColor();
+    const table = this.tableData();
+    const monthlyData = this.getMonthlyData();
 
-    // Donut Chart
-    new Chart(this.categoryChartRef.nativeElement, {
+    // Donut Chart — Gastos por categoría
+    this.categoryChart = new Chart(this.categoryChartRef.nativeElement, {
       type: 'doughnut',
       data: {
-        labels: ['Alimentación', 'Transporte', 'Servicios', 'Entretenimiento', 'Restaurantes', 'Salud'],
+        labels: table.map(r => r.category),
         datasets: [{
-          data: [380000, 210000, 390000, 85000, 165000, 120000],
-          backgroundColor: ['#F59E0B', '#6366F1', '#F97316', '#A855F7', '#F43F5E', '#EC4899'],
+          data: table.map(r => r.spent),
+          backgroundColor: this.chartColors.slice(0, table.length),
           borderWidth: 0,
           hoverOffset: 8,
         }],
@@ -232,15 +335,15 @@ export class ReportsPage implements AfterViewInit {
       },
     });
 
-    // Line Chart — Trend
-    new Chart(this.trendChartRef.nativeElement, {
+    // Line Chart — Tendencia mensual
+    this.trendChart = new Chart(this.trendChartRef.nativeElement, {
       type: 'line',
       data: {
-        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+        labels: monthlyData.labels,
         datasets: [
           {
             label: 'Ingresos',
-            data: [3200000, 3200000, 3500000, 3200000, 3400000, 3200000],
+            data: monthlyData.income,
             borderColor: '#22C55E',
             backgroundColor: 'rgba(34, 197, 94, 0.1)',
             fill: true,
@@ -250,7 +353,7 @@ export class ReportsPage implements AfterViewInit {
           },
           {
             label: 'Gastos',
-            data: [2100000, 2400000, 1900000, 2300000, 2000000, 1350000],
+            data: monthlyData.expenses,
             borderColor: '#EF4444',
             backgroundColor: 'rgba(239, 68, 68, 0.1)',
             fill: true,
@@ -271,27 +374,27 @@ export class ReportsPage implements AfterViewInit {
       },
     });
 
-    // Bar Chart — Comparison
-    new Chart(this.comparisonChartRef.nativeElement, {
+    // Bar Chart — Ingresos vs Gastos
+    this.comparisonChart = new Chart(this.comparisonChartRef.nativeElement, {
       type: 'bar',
       data: {
-        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+        labels: monthlyData.labels,
         datasets: [
           {
             label: 'Ingresos',
-            data: [3200000, 3200000, 3500000, 3200000, 3400000, 3200000],
+            data: monthlyData.income,
             backgroundColor: 'rgba(34, 197, 94, 0.7)',
             borderRadius: 6,
           },
           {
             label: 'Gastos Fijos',
-            data: [800000, 800000, 850000, 800000, 820000, 450000],
+            data: monthlyData.fixedExpenses,
             backgroundColor: 'rgba(239, 68, 68, 0.7)',
             borderRadius: 6,
           },
           {
             label: 'Gastos Variables',
-            data: [1300000, 1600000, 1050000, 1500000, 1180000, 900000],
+            data: monthlyData.variableExpenses,
             backgroundColor: 'rgba(245, 158, 11, 0.7)',
             borderRadius: 6,
           },
@@ -309,11 +412,72 @@ export class ReportsPage implements AfterViewInit {
     });
   }
 
+  private updateCharts(): void {
+    const table = this.tableData();
+    const monthlyData = this.getMonthlyData();
+
+    if (this.categoryChart) {
+      this.categoryChart.data.labels = table.map(r => r.category);
+      this.categoryChart.data.datasets[0].data = table.map(r => r.spent);
+      this.categoryChart.data.datasets[0].backgroundColor = this.chartColors.slice(0, table.length);
+      this.categoryChart.update();
+    }
+
+    if (this.trendChart) {
+      this.trendChart.data.labels = monthlyData.labels;
+      this.trendChart.data.datasets[0].data = monthlyData.income;
+      this.trendChart.data.datasets[1].data = monthlyData.expenses;
+      this.trendChart.update();
+    }
+
+    if (this.comparisonChart) {
+      this.comparisonChart.data.labels = monthlyData.labels;
+      this.comparisonChart.data.datasets[0].data = monthlyData.income;
+      this.comparisonChart.data.datasets[1].data = monthlyData.fixedExpenses;
+      this.comparisonChart.data.datasets[2].data = monthlyData.variableExpenses;
+      this.comparisonChart.update();
+    }
+  }
+
+  /** Calcular datos agrupados por mes para las gráficas de tendencia */
+  private getMonthlyData(): { labels: string[]; income: number[]; expenses: number[]; fixedExpenses: number[]; variableExpenses: number[] } {
+    const transactions = this.transactionService.transactions();
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const now = new Date();
+
+    // Últimos 6 meses
+    const labels: string[] = [];
+    const income: number[] = [];
+    const expenses: number[] = [];
+    const fixedExpenses: number[] = [];
+    const variableExpenses: number[] = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const month = d.getMonth();
+      const year = d.getFullYear();
+      labels.push(monthNames[month]);
+
+      const monthTxs = transactions.filter(tx => {
+        const txDate = new Date(tx.date);
+        return txDate.getMonth() === month && txDate.getFullYear() === year;
+      });
+
+      income.push(monthTxs.filter(tx => tx.type === 'income').reduce((s, tx) => s + tx.amount, 0));
+      expenses.push(monthTxs.filter(tx => tx.type !== 'income').reduce((s, tx) => s + tx.amount, 0));
+      fixedExpenses.push(monthTxs.filter(tx => tx.type === 'fixedExpense').reduce((s, tx) => s + tx.amount, 0));
+      variableExpenses.push(monthTxs.filter(tx => tx.type === 'variableExpense').reduce((s, tx) => s + tx.amount, 0));
+    }
+
+    return { labels, income, expenses, fixedExpenses, variableExpenses };
+  }
+
   async exportPdf(): Promise<void> {
     const pdfMake = await import('pdfmake/build/pdfmake');
     const pdfFonts = await import('pdfmake/build/vfs_fonts');
     (pdfMake as any).vfs = (pdfFonts as any).pdfMake?.vfs;
 
+    const data = this.tableData();
     const docDefinition: any = {
       content: [
         { text: 'FamyPay — Reporte Mensual', style: 'header' },
@@ -325,7 +489,7 @@ export class ReportsPage implements AfterViewInit {
             widths: ['*', 'auto', 'auto', 'auto'],
             body: [
               ['Categoría', 'Presupuesto', 'Gastado', '%'],
-              ...this.tableData.map(r => [
+              ...data.map(r => [
                 r.category,
                 `$${r.budget.toLocaleString('es-CO')}`,
                 `$${r.spent.toLocaleString('es-CO')}`,
@@ -356,7 +520,7 @@ export class ReportsPage implements AfterViewInit {
       { header: '%', key: 'percentage', width: 10 },
     ];
 
-    this.tableData.forEach(row => sheet.addRow(row));
+    this.tableData().forEach(row => sheet.addRow(row));
 
     // Estilo header
     sheet.getRow(1).font = { bold: true };
@@ -377,3 +541,4 @@ export class ReportsPage implements AfterViewInit {
 export const REPORTS_ROUTES: Routes = [
   { path: '', component: ReportsPage, title: 'Reportes — FamyPay' }
 ];
+

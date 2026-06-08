@@ -15,6 +15,8 @@ import { ReceiptParserService } from './services/receipt-parser.service';
 import { IndexedDbService } from '../../core/services/storage/indexeddb.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { OcrResult } from '../../core/models';
+import { FamilySpaceService } from '../family-space/services/family-space.service';
+import { GamificationService } from '../gamification/services/gamification.service';
 
 @Component({
   selector: 'app-ocr-scan',
@@ -333,6 +335,8 @@ export class OcrScanComponent {
   private indexedDb = inject(IndexedDbService);
   private notification = inject(NotificationService);
   private router = inject(Router);
+  private familyService = inject(FamilySpaceService);
+  private gamificationService = inject(GamificationService);
 
   readonly imagePreviewUrl = signal<string | null>(null);
   readonly isDragOver = signal(false);
@@ -420,6 +424,12 @@ export class OcrScanComponent {
     // Guardar imagen en IndexedDB
     if (this.selectedFile) {
       await this.indexedDb.saveReceipt('temp-' + Date.now(), this.selectedFile);
+    }
+
+    // Disparar logro first_ocr
+    const space = this.familyService.activeSpace();
+    if (space) {
+      this.gamificationService.unlockAchievement(space.id, 'first_ocr').catch(() => {});
     }
 
     this.notification.success('Recibo escaneado', 'Redirigiendo al formulario de gasto');

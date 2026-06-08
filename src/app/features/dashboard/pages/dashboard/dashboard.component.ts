@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CardModule } from 'primeng/card';
@@ -12,6 +12,9 @@ import { AuthService } from '../../../../core/services/firebase/auth.service';
 import { FirestoreService } from '../../../../core/services/firebase/firestore.service';
 import { Transaction, DashboardSummary } from '../../../../core/models';
 import { orderBy, limit, Unsubscribe } from 'firebase/firestore';
+import { FamilySpaceService } from '../../../family-space/services/family-space.service';
+import { TransactionService } from '../../../transactions/services/transaction.service';
+import { BudgetService } from '../../../budgets/services/budget.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -470,47 +473,87 @@ import { orderBy, limit, Unsubscribe } from 'firebase/firestore';
 export class DashboardComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private firestoreService = inject(FirestoreService);
+  private familyService = inject(FamilySpaceService);
+  private transactionService = inject(TransactionService);
+  private budgetService = inject(BudgetService);
 
   private unsubscribe?: Unsubscribe;
+
+  private readonly monthKey = (() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  })();
 
   readonly userName = computed(() => {
     const user = this.authService.currentUser();
     return user?.displayName?.split(' ')[0] || 'Usuario';
   });
 
-  readonly summary = signal<DashboardSummary>({
-    totalIncome: 3200000,
-    totalFixedExpenses: 450000,
-    totalVariableExpenses: 300000,
-    balance: 2450000,
-    moneyAge: 23,
-    moneyAgeLevel: 'healthy',
-    budgetConsumedPercentage: 62,
-    savingsProgress: 45,
+  /** Resumen calculado reactivamente desde transacciones y presupuestos reales */
+  readonly summary = computed<DashboardSummary>(() => {
+    const transactions = this.transactionService.transactions();
+    const budgets = this.budgetService.budgets();
+
+    // Filtrar transacciones del mes actual
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const monthTxs = transactions.filter(tx => {
+      const d = new Date(tx.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+
+    const totalIncome = monthTxs
+      .filter(tx => tx.type === 'income')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+
+    const totalFixedExpenses = monthTxs
+      .filter(tx => tx.type === 'fixedExpense')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+
+    const totalVariableExpenses = monthTxs
+      .filter(tx => tx.type === 'variableExpense')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+
+    const balance = totalIncome - totalFixedExpenses - totalVariableExpenses;
+
+    // Calcular "Edad del dinero" (días desde el último ingreso)
+    const lastIncome = transactions
+      .filter(tx => tx.type === 'income')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const moneyAge = lastIncome
+      ? Math.floor((Date.now() - new Date(lastIncome.date).getTime()) / 86400000)
+      : 0;
+    let moneyAgeLevel: 'critical' | 'alert' | 'healthy' | 'excellent' = 'healthy';
+    if (moneyAge >= 30) moneyAgeLevel = 'excellent';
+    else if (moneyAge >= 14) moneyAgeLevel = 'healthy';
+    else if (moneyAge >= 7) moneyAgeLevel = 'alert';
+    else moneyAgeLevel = 'critical';
+
+    // Calcular porcentaje de presupuesto consumido
+    const totalBudgetLimit = budgets.reduce((sum, b) => sum + b.limit, 0);
+    const totalExpenses = totalFixedExpenses + totalVariableExpenses;
+    const budgetConsumedPercentage = totalBudgetLimit > 0
+      ? Math.round((totalExpenses / totalBudgetLimit) * 100)
+      : 0;
+
+    return {
+      totalIncome,
+      totalFixedExpenses,
+      totalVariableExpenses,
+      balance,
+      moneyAge,
+      moneyAgeLevel,
+      budgetConsumedPercentage,
+      savingsProgress: 0, // Se implementará cuando exista SavingsGoal
+    };
   });
 
-  readonly recentTransactions = signal<Transaction[]>([
-    {
-      id: '1', type: 'variableExpense', amount: 85000, categoryId: '1', categoryName: 'Alimentación',
-      description: 'Supermercado Éxito', userId: '1', userName: 'Juan',
-      date: new Date(), createdAt: new Date(), receiptOcrText: null, isRecurring: false, status: 'confirmed'
-    },
-    {
-      id: '2', type: 'variableExpense', amount: 60000, categoryId: '2', categoryName: 'Transporte',
-      description: 'Gasolina', userId: '1', userName: 'María',
-      date: new Date(Date.now() - 86400000), createdAt: new Date(), receiptOcrText: null, isRecurring: false, status: 'confirmed'
-    },
-    {
-      id: '3', type: 'income', amount: 3200000, categoryId: '3', categoryName: 'Salario',
-      description: 'Salario Junio', userId: '1', userName: 'Juan',
-      date: new Date(Date.now() - 172800000), createdAt: new Date(), receiptOcrText: null, isRecurring: true, status: 'confirmed'
-    },
-    {
-      id: '4', type: 'fixedExpense', amount: 150000, categoryId: '4', categoryName: 'Servicios',
-      description: 'Electricidad', userId: '1', userName: 'Juan',
-      date: new Date(Date.now() - 259200000), createdAt: new Date(), receiptOcrText: null, isRecurring: true, status: 'confirmed'
-    },
-  ]);
+  /** Últimas 5 transacciones en tiempo real */
+  readonly recentTransactions = computed<Transaction[]>(() => {
+    return this.transactionService.transactions().slice(0, 5);
+  });
 
   readonly moneyAgeLabel = computed(() => {
     const level = this.summary().moneyAgeLevel;
@@ -528,12 +571,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return map[level] || 'info';
   });
 
+  constructor() {
+    // Suscribirse reactivamente a los cambios de espacio activo
+    effect(() => {
+      const space = this.familyService.activeSpace();
+      if (space) {
+        this.transactionService.listenToTransactions(space.id);
+        this.budgetService.listenToBudgets(space.id, this.monthKey);
+      }
+    });
+  }
+
   ngOnInit(): void {
-    // TODO: Cargar datos reales cuando se tenga un espacio familiar activo
+    const space = this.familyService.activeSpace();
+    if (space) {
+      this.transactionService.listenToTransactions(space.id);
+      this.budgetService.listenToBudgets(space.id, this.monthKey);
+    }
   }
 
   ngOnDestroy(): void {
     this.unsubscribe?.();
+    this.transactionService.destroy();
+    this.budgetService.destroy();
   }
 
   getCategoryBg(type: string): string {
@@ -556,3 +616,4 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return icons[type] || 'pi-circle';
   }
 }
+

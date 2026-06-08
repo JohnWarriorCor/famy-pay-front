@@ -19,6 +19,7 @@ import { CategoryService } from '../transactions/services/category.service';
 import { TransactionService } from '../transactions/services/transaction.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Subscription } from 'rxjs';
+import { GamificationService } from '../gamification/services/gamification.service';
 
 @Component({
   selector: 'app-budgets',
@@ -42,18 +43,40 @@ import { Subscription } from 'rxjs';
       @if (activeSpace()) {
         <div class="summary-cards">
           <div class="summary-card">
-            <span class="summary-label">Presupuesto Total</span>
+            <span class="summary-label">Ingresos Recibidos</span>
+            <span class="summary-value currency income-color">{{ totalIncome() | currencyFormat }}</span>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Presupuesto de Gastos</span>
             <span class="summary-value currency">{{ totalBudget() | currencyFormat }}</span>
           </div>
           <div class="summary-card">
-            <span class="summary-label">Gastado</span>
+            <span class="summary-label">Gastado Real</span>
             <span class="summary-value currency expense-color">{{ totalSpent() | currencyFormat }}</span>
           </div>
           <div class="summary-card">
-            <span class="summary-label">Disponible</span>
+            <span class="summary-label">Disponible de Presupuesto</span>
             <span class="summary-value currency" [class.income-color]="totalAvailable() > 0" [class.expense-color]="totalAvailable() <= 0">{{ totalAvailable() | currencyFormat }}</span>
           </div>
         </div>
+
+        <!-- Relación de Presupuesto vs Ingresos -->
+        @if (totalIncome() > 0) {
+          <div class="income-budget-relation-card">
+            <div class="flex justify-between align-items-center mb-2">
+              <span class="text-sm text-secondary font-medium">Porcentaje de Ingresos Presupuestados</span>
+              <span class="pct-val font-semibold text-primary">{{ Math.round((totalBudget() / totalIncome()) * 100) }}%</span>
+            </div>
+            <p-progressBar [value]="Math.min(Math.round((totalBudget() / totalIncome()) * 100), 100)" [showValue]="false" styleClass="budget-income-bar" />
+            
+            @if (totalBudget() > totalIncome()) {
+              <div class="budget-alert-warning mt-3 animate-fade-in">
+                <i class="pi pi-exclamation-triangle mr-2"></i>
+                <span>¡Advertencia! Tus límites de presupuesto superan tus ingresos totales del mes por <strong>{{ (totalBudget() - totalIncome()) | currencyFormat }}</strong>.</span>
+              </div>
+            }
+          </div>
+        }
 
         <!-- Budget List -->
         @if (budgets().length > 0) {
@@ -158,7 +181,7 @@ import { Subscription } from 'rxjs';
 
     .summary-cards {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: $spacing-3;
 
       @include mobile-only { grid-template-columns: 1fr; }
@@ -173,6 +196,25 @@ import { Subscription } from 'rxjs';
 
     .summary-label { font-size: $font-size-xs; color: var(--text-secondary); font-weight: $font-weight-medium; text-transform: uppercase; letter-spacing: 0.05em; }
     .summary-value { font-size: $font-size-xl; font-weight: $font-weight-bold; }
+
+    .income-budget-relation-card {
+      @include card($spacing-5);
+      @include flex-column;
+      gap: $spacing-2;
+    }
+
+    .budget-alert-warning {
+      display: flex;
+      align-items: center;
+      padding: $spacing-3 $spacing-4;
+      background: color-mix(in srgb, var(--danger-color) 10%, var(--surface-color));
+      border-left: 4px solid var(--danger-color);
+      border-radius: $radius-md;
+      color: var(--danger-color);
+      font-size: $font-size-sm;
+
+      i { font-size: 1.25rem; }
+    }
 
     .budgets-grid { @include flex-column; gap: $spacing-4; }
 
@@ -209,6 +251,15 @@ import { Subscription } from 'rxjs';
       .progress-warning .p-progressbar-value { background: var(--warning-color) !important; border-radius: $radius-full !important; }
       .progress-critical .p-progressbar-value { background: var(--danger-color) !important; border-radius: $radius-full !important; }
       .progress-exceeded .p-progressbar-value { background: var(--danger-color) !important; border-radius: $radius-full !important; }
+      .budget-income-bar .p-progressbar {
+        height: 8px !important;
+        border-radius: $radius-full !important;
+        background: var(--surface-alt) !important;
+        .p-progressbar-value {
+          border-radius: $radius-full !important;
+          background: var(--accent-color) !important;
+        }
+      }
     }
   `]
 })
@@ -220,6 +271,7 @@ export class BudgetsPage implements OnInit, OnDestroy {
   private categoryService = inject(CategoryService);
   private transactionService = inject(TransactionService);
   private notification = inject(NotificationService);
+  private gamificationService = inject(GamificationService);
 
   readonly activeSpace = this.familyService.activeSpace;
 
@@ -289,6 +341,17 @@ export class BudgetsPage implements OnInit, OnDestroy {
   readonly totalSpent = () => this.budgets().reduce((sum, b) => sum + b.spent, 0);
   readonly totalAvailable = () => this.totalBudget() - this.totalSpent();
 
+  readonly totalIncome = computed(() => {
+    const transactions = this.transactionService.transactions();
+    const currentMonthIncomes = transactions.filter(tx => {
+      if (tx.type !== 'income') return false;
+      const txDate = new Date(tx.date);
+      const txMonthKey = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
+      return txMonthKey === this.monthKey;
+    });
+    return currentMonthIncomes.reduce((sum, tx) => sum + tx.amount, 0);
+  });
+
   ngOnInit(): void {
     const space = this.activeSpace();
     if (space) {
@@ -335,6 +398,10 @@ export class BudgetsPage implements OnInit, OnDestroy {
         limit: limitAmount,
         month: this.monthKey
       });
+      
+      // Trigger Logro: Primer Presupuesto
+      await this.gamificationService.unlockAchievement(space.id, 'first_budget');
+
       this.notification.success('Presupuesto creado', `Presupuesto de ${categoryName} establecido en $${limitAmount.toLocaleString('es-CO')}`);
     } catch (e: any) {
       this.notification.error('Error al crear presupuesto', e.message);
